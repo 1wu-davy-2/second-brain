@@ -116,6 +116,7 @@ pnpm db:seed-admin
 
    - `driver: "pglite"` 或 `database: false` → 没读到 `DATABASE_URL`
    - `authSecret: false` → 没读到 `AUTH_SECRET`
+   - `schema.users: false` + `error: "schema_not_migrated"` → 这个库是空的（Vercel 的 Neon 集成可能新建了另一个库），对它执行一次 `pnpm db:migrate && pnpm db:seed-admin`，或把 `DATABASE_URL` 换成已经迁移过的库
 2. Environment Variables 是否勾选了 **Production**（Preview / Development 建议一起勾）
 3. 改完变量必须 **Redeploy**，已有部署不会自动读取新变量
 4. 变量值不要带引号、不要带首尾空格

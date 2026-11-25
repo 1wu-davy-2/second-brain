@@ -28,7 +28,7 @@ export function PasswordLoginForm() {
       if (!result || result.error) {
         setError(
           result?.error === "Configuration"
-            ? "服务端配置未完成：缺少 AUTH_SECRET，请联系管理员"
+            ? "服务端异常：打开 /api/health 查看原因（常见为数据库未迁移或 AUTH_SECRET 缺失）"
             : "账号或密码不正确",
         );
         return;
