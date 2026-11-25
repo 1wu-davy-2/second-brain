@@ -1,11 +1,10 @@
-import { neonConfig, Pool } from "@neondatabase/serverless";
-import { drizzle } from "drizzle-orm/neon-serverless";
-import { migrate } from "drizzle-orm/neon-serverless/migrator";
+import { neon } from "@neondatabase/serverless";
+import { drizzle } from "drizzle-orm/neon-http";
+import { migrate } from "drizzle-orm/neon-http/migrator";
 import path from "node:path";
-import { WebSocket as WsWebSocket } from "ws";
 
 /**
- * 对远程 Neon / Postgres 执行迁移。
+ * 对远程 Neon 执行迁移（HTTP 驱动，逐条语句提交）。
  * 本地 PGlite 不需要跑这个（开发态首次连库会自动迁移）。
  */
 async function main() {
@@ -15,19 +14,16 @@ async function main() {
     process.exit(1);
   }
 
-  // 与 lib/db/index.ts 保持一致：ws + 去掉 channel_binding
-  neonConfig.webSocketConstructor = WsWebSocket as unknown as typeof globalThis.WebSocket;
+  // 与 lib/db/index.ts 保持一致：去掉 libpq 专用参数
   const url = raw
     .replace(/([?&])channel_binding=[^&]*/g, "$1")
     .replace(/[?&]$/, "")
     .replace("?&", "?");
 
-  const pool = new Pool({ connectionString: url });
-  const db = drizzle(pool);
+  const db = drizzle(neon(url));
 
   console.log("→ 执行迁移:", path.join(process.cwd(), "drizzle"));
   await migrate(db, { migrationsFolder: path.join(process.cwd(), "drizzle") });
-  await pool.end();
   console.log("✓ 迁移完成");
 }
 

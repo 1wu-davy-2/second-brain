@@ -1,6 +1,5 @@
-import { neonConfig, Pool } from "@neondatabase/serverless";
-import { WebSocket as WsWebSocket } from "ws";
-import { drizzle as drizzleNeon } from "drizzle-orm/neon-serverless";
+import { neon } from "@neondatabase/serverless";
+import { drizzle as drizzleNeon } from "drizzle-orm/neon-http";
 import { drizzle as drizzlePglite } from "drizzle-orm/pglite";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
@@ -10,7 +9,7 @@ import * as schema from "./schema";
 
 /**
  * 双驱动：
- * - 设置 DATABASE_URL  -> Neon（生产 / 远程 Postgres，WebSocket 池化，支持事务）
+ * - 设置 DATABASE_URL  -> Neon（生产 / 远程 Postgres，HTTP 驱动，无长连接）
  * - 未设置            -> PGlite（本地嵌入式 Postgres，数据落在 ./.data/pgdata）
  *
  * 两个驱动的 drizzle 实例类型不同，这里统一收敛到一个类型，运行时行为一致。
@@ -25,14 +24,10 @@ type GlobalDb = {
 const globalForDb = globalThis as unknown as { __secondBrainDb?: GlobalDb };
 
 /**
- * Neon 的 serverless 驱动在 Node 运行时需要显式的 WebSocket 实现。
- * Node 22 的原生 WebSocket（undici）与它的 handshake 处理不兼容，必须用 ws。
- */
-neonConfig.webSocketConstructor = WsWebSocket as unknown as typeof globalThis.WebSocket;
-
-/**
- * 去掉 libpq 专用参数：Neon serverless 驱动只认 URL 里的基础字段，
- * channel_binding 会干扰 handshake。
+ * 用 Neon 的 HTTP 驱动（fetch）而不是 WebSocket 驱动：
+ * - 不需要 ws / 原生 WebSocket，Vercel 与本地行为一致
+ * - 本项目不使用事务，HTTP 驱动的限制不构成问题
+ * 去掉 libpq 专用参数，避免驱动解析报错。
  */
 function normalizeUrl(url: string): string {
   return url
@@ -42,8 +37,8 @@ function normalizeUrl(url: string): string {
 }
 
 function createNeon(url: string): Database {
-  const pool = new Pool({ connectionString: normalizeUrl(url) });
-  return drizzleNeon(pool, { schema }) as unknown as Database;
+  const client = neon(normalizeUrl(url));
+  return drizzleNeon(client, { schema }) as unknown as Database;
 }
 
 async function createPglite(): Promise<Database> {
