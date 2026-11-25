@@ -91,9 +91,16 @@ pnpm db:studio     # 可视化查看
 4. 部署完成后访问 `https://<域名>/api/health`，返回 `{"ok":true,"driver":"neon"}` 即数据库通了。
 5. 数据库迁移只需在本地执行一次：`pnpm db:migrate`（已执行过则跳过）。
 
-默认管理员：`admin` / `admin123@`（首次登录后建议重置密码，见下）。
+账号体系：内置账号密码登录（scrypt 哈希）与可选的 GitHub / Google OAuth。仓库公开，**默认管理员密码不写进仓库**，初始化方式：
 
-重置密码：改 `.env.local` 里的 `ADMIN_PASSWORD`，重新执行 `pnpm db:seed-admin`，会覆盖同一账号的密码哈希。
+```bash
+# 在 .env.local 里设置 ADMIN_USERNAME / ADMIN_PASSWORD 后执行
+pnpm db:seed-admin
+```
+
+同一个命令也用于重置密码：改 `ADMIN_PASSWORD` 再跑一次即可覆盖哈希。
+
+> 连接串里的 `channel_binding=require` 是 libpq 参数，Neon serverless 驱动会在运行时自动忽略，保留不影响使用。
 
 > Vercel 上若缺少 `DATABASE_URL`，服务仍能启动但会退回 PGlite（数据不持久），并打印警告。生产务必配置。
 > 仓库是公开的，**不要**把连接串写进任何提交的文件；只放在 Vercel 环境变量和本地 `.env.local`。
