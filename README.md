@@ -46,6 +46,7 @@ pnpm dev
 | 变量 | 必填 | 说明 |
 | --- | --- | --- |
 | `DATABASE_URL` | 生产必填 | Neon 连接串。留空则用本地 PGlite |
+| `DATABASE_URL_OVERRIDE` | 选填 | 优先于 `DATABASE_URL`。Vercel 的 Neon 集成会把 `DATABASE_URL` 锁成只读，想指向自己的库时填这个 |
 | `AUTH_SECRET` | 生产必填 | `openssl rand -base64 32` |
 | `AUTH_GITHUB_ID` / `AUTH_GITHUB_SECRET` | 选填 | GitHub OAuth |
 | `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` | 选填 | Google OAuth |
@@ -122,6 +123,16 @@ pnpm db:seed-admin
 4. 变量值不要带引号、不要带首尾空格
 
 登录页也会直接列出缺失项，不用猜。
+
+### `DATABASE_URL` 带锁图标（Neon 集成托管）改不了怎么办
+
+不要为了改它去删集成——断开集成可能连带删除它创建的 Neon 项目。改用覆盖变量：
+
+1. Environment Variables → Add New → Key `DATABASE_URL_OVERRIDE`，Value 填你自己的连接串
+2. 环境勾 Production + Preview，Save
+3. Redeploy
+
+`DATABASE_URL_OVERRIDE` 优先级高于 `DATABASE_URL`，`/api/health` 会显示 `databaseSource: "override"` 以确认生效。
 
 ## 目录
 

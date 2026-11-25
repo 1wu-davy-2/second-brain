@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
+import { resolveDatabaseUrl } from "@/lib/db/url";
 
 export const dynamic = "force-dynamic";
 
@@ -14,9 +15,15 @@ function firstRow(result: unknown): Row | undefined {
 
 /** 部署后自检：数据库可达性 + 迁移是否执行 + 认证密钥是否就位 */
 export async function GET() {
-  const driver = process.env.DATABASE_URL ? "neon" : "pglite";
+  const url = resolveDatabaseUrl();
+  const driver = url ? "neon" : "pglite";
   const configured = {
-    database: Boolean(process.env.DATABASE_URL),
+    database: Boolean(url),
+    databaseSource: process.env.DATABASE_URL_OVERRIDE?.trim()
+      ? "override"
+      : url
+        ? "env"
+        : "none",
     authSecret: Boolean(process.env.AUTH_SECRET),
     platform: process.env.VERCEL ? "vercel" : "local",
   };
@@ -70,7 +77,9 @@ export async function GET() {
         ok: false,
         driver,
         configured,
-        error: configured.database ? "database_unreachable" : "missing_database_url",
+        error: configured.database
+          ? "database_unreachable"
+          : "missing_database_url",
       },
       { status: 500 },
     );

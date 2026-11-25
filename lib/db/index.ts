@@ -6,6 +6,7 @@ import { migrate } from "drizzle-orm/pglite/migrator";
 import path from "node:path";
 import { mkdirSync } from "node:fs";
 import * as schema from "./schema";
+import { normalizeDatabaseUrl, resolveDatabaseUrl } from "./url";
 
 /**
  * 双驱动：
@@ -27,24 +28,16 @@ const globalForDb = globalThis as unknown as { __secondBrainDb?: GlobalDb };
  * 用 Neon 的 HTTP 驱动（fetch）而不是 WebSocket 驱动：
  * - 不需要 ws / 原生 WebSocket，Vercel 与本地行为一致
  * - 本项目不使用事务，HTTP 驱动的限制不构成问题
- * 去掉 libpq 专用参数，避免驱动解析报错。
  */
-function normalizeUrl(url: string): string {
-  return url
-    .replace(/([?&])channel_binding=[^&]*/g, "$1")
-    .replace(/[?&]$/, "")
-    .replace("?&", "?");
-}
-
 function createNeon(url: string): Database {
-  const client = neon(normalizeUrl(url));
+  const client = neon(normalizeDatabaseUrl(url));
   return drizzleNeon(client, { schema }) as unknown as Database;
 }
 
 async function createPglite(): Promise<Database> {
   if (process.env.VERCEL) {
     throw new Error(
-      "Vercel 环境缺少 DATABASE_URL：Serverless 文件系统只读，无法使用本地 PGlite。请在环境变量中配置 Neon 连接串后重新部署。",
+      "Vercel 环境没有可用的数据库连接串：Serverless 文件系统只读，无法使用本地 PGlite。请配置 DATABASE_URL 或 DATABASE_URL_OVERRIDE 后重新部署。",
     );
   }
   // 动态加载：生产环境有 DATABASE_URL 时完全不需要 WASM 包，也避免被打进 serverless bundle
@@ -60,8 +53,8 @@ async function createPglite(): Promise<Database> {
 }
 
 async function init(): Promise<Database> {
-  const url = process.env.DATABASE_URL;
-  if (url && url.trim().length > 0) {
+  const url = resolveDatabaseUrl();
+  if (url) {
     return createNeon(url);
   }
   if (process.env.NODE_ENV === "production" && process.env.VERCEL) {

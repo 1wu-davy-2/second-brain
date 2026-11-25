@@ -6,7 +6,10 @@ export default defineConfig({
   dialect: "postgresql",
   casing: "snake_case",
   dbCredentials: {
-    url: process.env.DATABASE_URL ?? "postgres://localhost:5432/second_brain",
+    url:
+      process.env.DATABASE_URL_OVERRIDE?.trim() ||
+      process.env.DATABASE_URL?.trim() ||
+      "postgres://localhost:5432/second_brain",
   },
   verbose: true,
   strict: false,
