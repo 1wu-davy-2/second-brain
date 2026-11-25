@@ -26,6 +26,23 @@
 
 快捷键：`⌘/Ctrl + K` 搜索 · `⌘/Ctrl + N` 新建 · `⌘/Ctrl + S` 保存 · `⌘/Ctrl + B` 加粗 · `⌘/Ctrl + I` 斜体 · `[[` 引用
 
+## 外部访问
+
+| 方式 | 地址 | 用途 |
+| --- | --- | --- |
+| REST API | `POST /api/v1/notes` 等 | 用 URL 直接建笔记、搜索、修改 |
+| MCP 服务 | `POST /api/mcp` | 挂到 Claude Desktop / Cursor 等客户端 |
+
+认证统一用 API 密钥（`Authorization: Bearer sb_live_...`），密钥存数据库、可随时吊销，不用重新部署：
+
+```bash
+pnpm api:key create my-laptop   # 明文只打印一次
+pnpm api:key list
+pnpm api:key revoke <key-id>
+```
+
+完整端点、参数、curl 示例和客户端配置见 **[docs/API.md](docs/API.md)**。
+
 ---
 
 ## 本地启动

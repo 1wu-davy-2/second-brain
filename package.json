@@ -15,6 +15,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx --env-file-if-exists=.env.local scripts/migrate.ts",
     "db:seed-admin": "tsx --env-file-if-exists=.env.local scripts/seed-admin.ts",
+    "api:key": "tsx --env-file-if-exists=.env.local scripts/api-key.ts",
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {

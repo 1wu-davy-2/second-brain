@@ -28,3 +28,6 @@ playwright-cli.json
 
 # 本地助手记忆
 .workbuddy
+
+# 外部 API / MCP 密钥（本地保存，勿提交）
+.api-token.local

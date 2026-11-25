@@ -149,8 +149,32 @@ export const noteLinks = pgTable(
   ],
 );
 
+/**
+ * 外部访问用的 API 密钥。只存 sha256 哈希，明文仅在创建时返回一次。
+ */
+export const apiKeys = pgTable(
+  "api_keys",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    /** 展示用前缀，如 sb_live_ab12 */
+    prefix: text("prefix").notNull(),
+    tokenHash: text("token_hash").notNull().unique(),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true, mode: "date" }),
+    revokedAt: timestamp("revoked_at", { withTimezone: true, mode: "date" }),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+  },
+  (t) => [index("idx_api_keys_user").on(t.userId)],
+);
+
 // ---------------------------------------------------------------- 类型导出
 
+export type ApiKey = typeof apiKeys.$inferSelect;
 export type User = typeof users.$inferSelect;
 export type Note = typeof notes.$inferSelect;
 export type NewNote = typeof notes.$inferInsert;
