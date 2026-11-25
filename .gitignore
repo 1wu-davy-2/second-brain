@@ -1,0 +1,30 @@
+node_modules
+.next
+out
+build
+dist
+
+# 本地 PGlite 数据目录
+.data
+
+# env
+.env
+.env.local
+.env*.local
+
+# misc
+.DS_Store
+*.pem
+npm-debug.log*
+pnpm-debug.log*
+tsconfig.tsbuildinfo
+next-env.d.ts
+.vercel
+
+# 本地验证产物
+.playwright-cli
+shots
+playwright-cli.json
+
+# 本地助手记忆
+.workbuddy

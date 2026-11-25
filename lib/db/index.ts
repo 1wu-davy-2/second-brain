@@ -1,0 +1,91 @@
+import { neonConfig, Pool } from "@neondatabase/serverless";
+import { WebSocket as WsWebSocket } from "ws";
+import { drizzle as drizzleNeon } from "drizzle-orm/neon-serverless";
+import { drizzle as drizzlePglite } from "drizzle-orm/pglite";
+import type { PgliteDatabase } from "drizzle-orm/pglite";
+import { migrate } from "drizzle-orm/pglite/migrator";
+import path from "node:path";
+import { mkdirSync } from "node:fs";
+import * as schema from "./schema";
+
+/**
+ * 双驱动：
+ * - 设置 DATABASE_URL  -> Neon（生产 / 远程 Postgres，WebSocket 池化，支持事务）
+ * - 未设置            -> PGlite（本地嵌入式 Postgres，数据落在 ./.data/pgdata）
+ *
+ * 两个驱动的 drizzle 实例类型不同，这里统一收敛到一个类型，运行时行为一致。
+ */
+
+export type Database = PgliteDatabase<typeof schema>;
+
+type GlobalDb = {
+  promise: Promise<Database> | null;
+};
+
+const globalForDb = globalThis as unknown as { __secondBrainDb?: GlobalDb };
+
+/**
+ * Neon 的 serverless 驱动在 Node 运行时需要显式的 WebSocket 实现。
+ * Node 22 的原生 WebSocket（undici）与它的 handshake 处理不兼容，必须用 ws。
+ */
+neonConfig.webSocketConstructor = WsWebSocket as unknown as typeof globalThis.WebSocket;
+
+/**
+ * 去掉 libpq 专用参数：Neon serverless 驱动只认 URL 里的基础字段，
+ * channel_binding 会干扰 handshake。
+ */
+function normalizeUrl(url: string): string {
+  return url
+    .replace(/([?&])channel_binding=[^&]*/g, "$1")
+    .replace(/[?&]$/, "")
+    .replace("?&", "?");
+}
+
+function createNeon(url: string): Database {
+  const pool = new Pool({ connectionString: normalizeUrl(url) });
+  return drizzleNeon(pool, { schema }) as unknown as Database;
+}
+
+async function createPglite(): Promise<Database> {
+  // 动态加载：生产环境有 DATABASE_URL 时完全不需要 WASM 包，也避免被打进 serverless bundle
+  const { PGlite } = await import("@electric-sql/pglite");
+  const dataDir = path.join(process.cwd(), ".data", "pgdata");
+  // PGlite 只会在 dataDir 内递归建目录，父目录需要自己保证存在
+  mkdirSync(path.dirname(dataDir), { recursive: true });
+  const client = new PGlite(dataDir);
+  const db = drizzlePglite(client, { schema });
+  // 本地开发自动建表 / 迁移，零配置即可跑
+  await migrate(db, { migrationsFolder: path.join(process.cwd(), "drizzle") });
+  return db as unknown as Database;
+}
+
+async function init(): Promise<Database> {
+  const url = process.env.DATABASE_URL;
+  if (url && url.trim().length > 0) {
+    return createNeon(url);
+  }
+  if (process.env.NODE_ENV === "production" && process.env.VERCEL) {
+    // Vercel 上没有 DATABASE_URL 时不该静默降级到 WASM 文件库
+    console.warn("[db] 未设置 DATABASE_URL，正在使用 PGlite（数据不可持久化到磁盘，仅供预览）");
+  }
+  return createPglite();
+}
+
+export function getDb(): Promise<Database> {
+  if (!globalForDb.__secondBrainDb) {
+    globalForDb.__secondBrainDb = { promise: null };
+  }
+  const holder = globalForDb.__secondBrainDb;
+  if (!holder.promise) {
+    holder.promise = init().catch((error) => {
+      holder.promise = null;
+      throw error;
+    });
+  }
+  return holder.promise;
+}
+
+/** 便捷写法：await db() 直接拿实例 */
+export const db = getDb;
+
+export { schema };

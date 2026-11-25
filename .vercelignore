@@ -1,0 +1,13 @@
+# 本地数据与验证产物，不上传
+.data
+shots
+.playwright-cli
+playwright-cli.json
+
+# 环境变量只留在本地/Vercel
+.env
+.env.local
+.env*.local
+
+node_modules
+.next
