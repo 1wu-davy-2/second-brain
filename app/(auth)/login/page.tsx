@@ -14,6 +14,18 @@ export default async function LoginPage() {
 
   const hasOauth = oauthProviders.length > 0;
 
+  const configIssues: string[] = [];
+  if (!process.env.AUTH_SECRET) {
+    configIssues.push(
+      "AUTH_SECRET 未设置：Auth.js 会直接拒绝所有登录请求（表现为 Server error）",
+    );
+  }
+  if (process.env.VERCEL && !process.env.DATABASE_URL) {
+    configIssues.push(
+      "DATABASE_URL 未设置：Vercel 的只读文件系统无法使用本地 PGlite",
+    );
+  }
+
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center px-6 py-16">
       <div className="w-full max-w-[360px]">
@@ -48,6 +60,26 @@ export default async function LoginPage() {
             </div>
           ))}
         </div>
+
+        {configIssues.length > 0 ? (
+          <div className="mb-4 rounded-[var(--radius-md)] border border-danger/40 bg-danger/5 p-3">
+            <p className="text-[12px] font-semibold text-danger">部署配置未完成</p>
+            <ul className="mt-1.5 space-y-1">
+              {configIssues.map((issue) => (
+                <li
+                  key={issue}
+                  className="flex gap-1.5 text-[11.5px] leading-relaxed text-muted-foreground"
+                >
+                  <span className="text-danger">·</span>
+                  {issue}
+                </li>
+              ))}
+            </ul>
+            <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground/80">
+              Vercel → Settings → Environment Variables 添加后需要 Redeploy 才会生效。
+            </p>
+          </div>
+        ) : null}
 
         <PasswordLoginForm />
 
@@ -99,16 +131,9 @@ export default async function LoginPage() {
           ) : null}
 
           {!hasOauth && !devLoginEnabled ? (
-            <p className="rounded-lg border border-border bg-muted/50 p-3 text-[12.5px] leading-relaxed text-muted-foreground">
-              还没有可用的登录方式。请在环境变量里配置
-              <code className="mx-1 rounded bg-background px-1 py-0.5 font-mono text-[11px]">
-                AUTH_GITHUB_ID
-              </code>
-              或
-              <code className="mx-1 rounded bg-background px-1 py-0.5 font-mono text-[11px]">
-                AUTH_GOOGLE_ID
-              </code>
-              。
+            <p className="text-center text-[11px] leading-relaxed text-muted-foreground/70">
+              第三方登录未配置。用上面的账号密码登录即可；
+              需要 GitHub / Google 登录时再补 OAuth 变量。
             </p>
           ) : null}
         </div>

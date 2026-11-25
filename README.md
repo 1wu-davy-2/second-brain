@@ -102,8 +102,25 @@ pnpm db:seed-admin
 
 > 连接串里的 `channel_binding=require` 是 libpq 参数，Neon serverless 驱动会在运行时自动忽略，保留不影响使用。
 
-> Vercel 上若缺少 `DATABASE_URL`，服务仍能启动但会退回 PGlite（数据不持久），并打印警告。生产务必配置。
 > 仓库是公开的，**不要**把连接串写进任何提交的文件；只放在 Vercel 环境变量和本地 `.env.local`。
+
+### 排障：登录报 “There was a problem with the server configuration”
+
+这是 Auth.js 拿不到 `AUTH_SECRET` 的标准报错，不是密码错误。按顺序排查：
+
+1. `https://<域名>/api/health` 看 `configured` 字段：
+
+   ```json
+   { "ok": true, "driver": "neon", "configured": { "database": true, "authSecret": true, "platform": "vercel" } }
+   ```
+
+   - `driver: "pglite"` 或 `database: false` → 没读到 `DATABASE_URL`
+   - `authSecret: false` → 没读到 `AUTH_SECRET`
+2. Environment Variables 是否勾选了 **Production**（Preview / Development 建议一起勾）
+3. 改完变量必须 **Redeploy**，已有部署不会自动读取新变量
+4. 变量值不要带引号、不要带首尾空格
+
+登录页也会直接列出缺失项，不用猜。
 
 ## 目录
 

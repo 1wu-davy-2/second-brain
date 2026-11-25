@@ -42,6 +42,11 @@ function createNeon(url: string): Database {
 }
 
 async function createPglite(): Promise<Database> {
+  if (process.env.VERCEL) {
+    throw new Error(
+      "Vercel 环境缺少 DATABASE_URL：Serverless 文件系统只读，无法使用本地 PGlite。请在环境变量中配置 Neon 连接串后重新部署。",
+    );
+  }
   // 动态加载：生产环境有 DATABASE_URL 时完全不需要 WASM 包，也避免被打进 serverless bundle
   const { PGlite } = await import("@electric-sql/pglite");
   const dataDir = path.join(process.cwd(), ".data", "pgdata");

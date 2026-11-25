@@ -26,7 +26,11 @@ export function PasswordLoginForm() {
         redirect: false,
       });
       if (!result || result.error) {
-        setError("账号或密码不正确");
+        setError(
+          result?.error === "Configuration"
+            ? "服务端配置未完成：缺少 AUTH_SECRET，请联系管理员"
+            : "账号或密码不正确",
+        );
         return;
       }
       router.push("/notes");
