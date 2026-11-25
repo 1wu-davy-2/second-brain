@@ -43,6 +43,12 @@ pnpm api:key revoke <key-id>
 
 完整端点、参数、curl 示例和客户端配置见 **[docs/API.md](docs/API.md)**。
 
+仓库里带了一份可直接灌入的起始内容（12 篇互相链接的方法论笔记，幂等，重复跑只跳过）：
+
+```bash
+node scripts/seed-content.mjs https://<域名>
+```
+
 ---
 
 ## 本地启动
